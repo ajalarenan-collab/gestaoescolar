@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEMED Gestão Escolar - Frota e Contratos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Regra profissional para impressão de relatórios: oculta menus e exibe apenas o conteúdo */
+        @media print {
+            aside, header button, .no-print, #login-screen, .space-x-2, button {
+                display: none !important;
+            }
+            body, html, .flex-1 {
+                background-color: white !important;
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+            #app-container {
+                display: block !important;
+            }
+            main {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            .shadow-sm, .border {
+                border: none !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 flex h-screen overflow-hidden">
+
+    <!-- CONTAINER DE NOTIFICAÇÕES (TOASTS) -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 space-y-6 border-t-4 border-amber-500">
+            <div class="text-center space-y-2">
+                <div class="bg-emerald-800 text-amber-400 w-14 h-14 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl shadow">SE</div>
+                <h1 class="text-2xl font-bold text-slate-900">SEMED Gestão Escolar</h1>
+                <p class="text-xs text-slate-500">Prefeitura Municipal de Bela Vista - MS</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">E-mail de Acesso</label>
+                    <input type="email" id="login-email" value="ajalarenan@gmail.com" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-700 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Senha de Acesso</label>
+                    <input type="password" id="login-password" value="123456" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-700 focus:outline-none">
+                </div>
+                <button type="button" onclick="fazerLogin()" class="w-full py-3 bg-emerald-800 hover:bg-emerald-900 text-amber-300 rounded-lg text-sm font-bold transition shadow cursor-pointer">Entrar no Sistema</button>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-900 text-center">
+                <b>Credenciais:</b> ajalarenan@gmail.com | <code>123456</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- APLICAÇÃO PRINCIPAL -->
+    <div id="app-container" class="flex h-screen w-screen overflow-hidden hidden">
+        
+        <!-- MENU LATERAL -->
+        <aside class="w-64 bg-emerald-900 text-slate-100 flex flex-col justify-between border-r border-emerald-950">
+            <div>
+                <div class="p-6 border-b border-emerald-800 flex items-center space-x-3 bg-emerald-950/40">
+                    <div class="bg-amber-500 text-emerald-950 p-2 rounded-xl font-bold">SE</div>
+                    <div>
+                        <h1 class="font-bold text-white text-sm">SEMED Gestão</h1>
+                        <p class="text-xs text-amber-400 font-medium">Bela Vista - MS</p>
+                    </div>
+                </div>
+                <nav class="p-4 space-y-1">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium bg-amber-500 text-emerald-950 font-bold transition shadow-sm cursor-pointer">Painel Geral</button>
+                    <button onclick="switchTab('fleet')" id="nav-fleet" class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium hover:bg-emerald-800 text-slate-200 transition cursor-pointer">Frota de Ônibus</button>
+                    <button onclick="switchTab('contracts')" id="nav-contracts" class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium hover:bg-emerald-800 text-slate-200 transition cursor-pointer">Gestão de Contratos</button>
+                    <button onclick="switchTab('orders')" id="nav-orders" class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium hover:bg-emerald-800 text-slate-200 transition cursor-pointer">Pedidos de Peças</button>
+                    <button onclick="switchTab('new-vehicle')" id="nav-new-vehicle" class="w-full text-left px-4 py-3 rounded-lg text-sm font-medium hover:bg-emerald-800 text-slate-200 transition cursor-pointer">Cadastrar Veículo</button>
+                </nav>
+            </div>
+            <div class="p-4 border-t border-emerald-800 space-y-3 bg-emerald-950/30">
+                <div class="text-xs text-slate-300 flex items-center justify-between">
+                    <span>Renan Ajala</span>
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                </div>
+                <button onclick="handleLogout()" class="w-full py-2 bg-emerald-950 hover:bg-black text-rose-300 rounded-lg text-xs font-semibold transition border border-emerald-800 cursor-pointer">Sair do Sistema</button>
+            </div>
+        </aside>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-100">
+            <header class="bg-white shadow-sm border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+                <div class="flex items-center space-x-3">
+                    <div class="w-3 h-6 bg-amber-500 rounded-full"></div>
+                    <h2 id="page-title" class="text-xl font-bold text-slate-800">Painel Geral da Frota</h2>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="exportReport()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition border border-emerald-200 cursor-pointer">🖨️ Exportar Relatório</button>
+                    <span class="text-xs bg-amber-100 text-amber-900 px-3 py-1 rounded-full font-bold">Módulo Escolar Ativo</span>
+                </div>
+            </header>
+
+            <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+                
+                <!-- ABA 1: DASHBOARD -->
+                <div id="tab-dashboard" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-800 border-t border-r border-b border-slate-200">
+                            <p class="text-xs text-slate-500 font-semibold uppercase">Frota Monitorada</p>
+                            <h3 id="kpi-total" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-600 border-t border-r border-b border-slate-200">
+                            <p class="text-xs text-slate-500 font-semibold uppercase">Disponíveis</p>
+                            <h3 id="kpi-ok" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500 border-t border-r border-b border-slate-200">
+                            <p class="text-xs text-slate-500 font-semibold uppercase">Parados / Oficina</p>
+                            <h3 id="kpi-warning" class="text-3xl font-extrabold text-amber-500 mt-1">0</h3>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-rose-500 border-t border-r border-b border-slate-200">
+                            <p class="text-xs text-slate-500 font-semibold uppercase">Esperando Peça</p>
+                            <h3 id="kpi-danger" class="text-3xl font-extrabold text-rose-600 mt-1">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+                        <h3 class="font-bold text-slate-800 text-base">Alertas e Status Operacional</h3>
+                        <div id="dashboard-alerts-list" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- ABA 2: LISTAGEM DA FROTA -->
+                <div id="tab-fleet" class="space-y-6 hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-5 border-b border-slate-200 flex justify-between items-center flex-wrap gap-4">
+                            <h3 class="font-bold text-slate-800">Relação Completa de Veículos</h3>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button onclick="filterStatus('Todos')" class="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">Todos</button>
+                                <button onclick="filterStatus('Disponível')" class="px-3 py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg cursor-pointer">Disponíveis</button>
+                                <button onclick="filterStatus('Parado')" class="px-3 py-1.5 text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg cursor-pointer">Parados</button>
+                                <button onclick="filterStatus('Esperando Peça')" class="px-3 py-1.5 text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg cursor-pointer">Esperando Peça</button>
+                                <input type="text" id="search-input" onkeyup="filterFleet()" placeholder="Buscar placa ou modelo..." class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="p-4">Identificação / Placa</th>
+                                        <th class="p-4">Modelo</th>
+                                        <th class="p-4">Km Atual</th>
+                                        <th class="p-4">Disponibilidade</th>
+                                        <th class="p-4">Contrato Vinculado</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fleet-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA 3: GESTÃO DE CONTRATOS -->
+                <div id="tab-contracts" class="space-y-6 hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
+                        <div class="flex justify-between items-center flex-wrap gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg">Cadastro e Vigência de Contratos</h3>
+                                <p class="text-xs text-slate-500">Gerenciamento de contratos, vigências, gestores e fiscais.</p>
+                            </div>
+                            <button onclick="openNewContractModal()" class="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-amber-300 rounded-lg text-sm font-bold transition shadow-sm cursor-pointer">+ Novo Contrato</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="p-4">Nº Contrato / Empresa</th>
+                                        <th class="p-4">Objeto</th>
+                                        <th class="p-4">Vigência</th>
+                                        <th class="p-4">Gestor / Fiscal</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="contracts-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA 4: PEDIDOS DE PEÇAS -->
+                <div id="tab-orders" class="space-y-6 hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+                        <div class="flex justify-between items-center flex-wrap gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg">Controle de Pedidos de Peças</h3>
+                                <p class="text-xs text-slate-500">Solicitação de insumos vinculada à frota.</p>
+                            </div>
+                            <button onclick="openNewOrderModal()" class="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-amber-300 rounded-lg text-sm font-bold transition shadow-sm cursor-pointer">Novo Pedido</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="p-4">Veículo</th>
+                                        <th class="p-4">Peças / Descrição</th>
+                                        <th class="p-4">Data</th>
+                                        <th class="p-4">Status</th>
+                                        <th class="p-4 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA 5: CADASTRAR OU EDITAR VEÍCULO -->
+                <div id="tab-new-vehicle" class="space-y-6 hidden max-w-2xl mx-auto">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
+                        <h3 id="form-title" class="font-bold text-slate-800 text-lg border-b pb-4">Cadastro de Novo Ônibus Escolar</h3>
+                        <form id="vehicle-form" onsubmit="saveVehicle(event)" class="space-y-4">
+                            <input type="hidden" id="v-edit-id">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Identificação</label>
+                                    <input type="text" id="v-name" required placeholder="Ônibus 10" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Placa</label>
+                                    <input type="text" id="v-plate" required placeholder="ABC-1234" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Modelo</label>
+                                <input type="text" id="v-model" required placeholder="Mercedes-Benz LO-916" class="w-full px-3 py-2 border rounded-lg text-sm">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Km Atual</label>
+                                    <input type="number" id="v-km" required placeholder="45000" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Última Revisão (km)</label>
+                                    <input type="number" id="v-last-rev" required placeholder="40000" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Vincular ao Contrato</label>
+                                <select id="v-contract" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                    <!-- Preenchido dinamicamente via JS -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Disponibilidade</label>
+                                <select id="v-status" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                                    <option value="Disponível">Disponível</option>
+                                    <option value="Parado">Parado</option>
+                                    <option value="Esperando Peça">Esperando Peça</option>
+                                </select>
+                            </div>
+                            <div class="pt-4 flex justify-end space-x-3">
+                                <button type="button" onclick="switchTab('fleet')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm cursor-pointer">Cancelar</button>
+                                <button type="submit" class="px-5 py-2 bg-emerald-800 text-amber-300 font-bold rounded-lg text-sm transition cursor-pointer">Salvar Veículo</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ABA 6: DOSSIÊ -->
+                <div id="tab-details" class="space-y-6 hidden">
+                    <div class="flex items-center justify-between">
+                        <button onclick="switchTab('fleet')" class="px-4 py-2 text-sm font-medium text-slate-600 bg-white rounded-lg border hover:bg-slate-50 cursor-pointer">← Voltar</button>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openEditVehicle(currentActiveVehicleId)" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer">✏️ Editar Veículo</button>
+                            <select id="det-status-select" onchange="changeVehicleStatus(this.value)" class="px-3 py-1.5 border rounded-lg text-xs font-bold bg-white">
+                                <option value="Disponível">Disponível</option>
+                                <option value="Parado">Parado</option>
+                                <option value="Esperando Peça">Esperando Peça</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border flex justify-between items-center flex-wrap gap-4 border-l-4 border-amber-500">
+                        <div>
+                            <h3 id="det-vehicle-title" class="text-2xl font-bold text-slate-900">Ônibus</h3>
+                            <p id="det-vehicle-subtitle" class="text-sm text-slate-500 mt-1">Detalhes</p>
+                            <div class="mt-2 text-xs font-semibold text-emerald-900 bg-emerald-50 px-3 py-1 rounded-md inline-block">
+                                📋 Contrato: <span id="det-contract-name" class="font-bold text-slate-900"></span> | Gestor: <span id="det-gestor" class="font-normal text-slate-700"></span> | Fiscal: <span id="det-fiscal" class="font-normal text-slate-700"></span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Km Atual</p>
+                            <h4 id="det-vehicle-km" class="text-2xl font-extrabold text-emerald-800">0 km</h4>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+                            <h4 class="font-bold text-slate-800">Parâmetros e Peças</h4>
+                            <div class="space-y-3 text-sm">
+                                <div class="flex justify-between p-3 bg-slate-50 rounded-lg">
+                                    <span class="text-slate-600">Última Revisão</span>
+                                    <span id="det-last-rev-val" class="font-semibold">0 km</span>
+                                </div>
+                                <div class="flex justify-between p-3 bg-slate-50 rounded-lg">
+                                    <span class="text-slate-600">Próxima Preventiva</span>
+                                    <span id="det-next-rev-val" class="font-semibold text-emerald-800">0 km</span>
+                                </div>
+                            </div>
+                            <button onclick="openOrderForCurrentVehicle()" class="w-full py-2 bg-emerald-900 hover:bg-black text-amber-300 rounded-lg text-sm font-bold transition cursor-pointer">Solicitar Peças</button>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+                            <div class="flex justify-between items-center">
+                                <h4 class="font-bold text-slate-800">Histórico</h4>
+                                <button onclick="registerMaintenanceModal()" class="px-3 py-1.5 bg-emerald-800 text-amber-300 font-bold rounded-lg text-xs transition cursor-pointer">Registrar Manutenção</button>
+                            </div>
+                            <div id="det-history-list" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- SCRIPT DO SISTEMA -->
+    <script>
+        let contractsData = JSON.parse(localStorage.getItem('semed_contracts_v1')) || [
+            { id: 1, number: "CT 045/2025", company: "Auto Peças Bela Vista Ltda", object: "Fornecimento de peças e manutenção frota escolar", start: "2025-01-10", end: "2026-12-31", gestor: "Carlos Alberto", fiscal: "Renan Ajala" }
+        ];
+
+        let fleetData = JSON.parse(localStorage.getItem('semed_fleet_v11')) || [
+            { id: 1, name: "Ônibus 01", plate: "QWE-1234", model: "Mercedes-Benz LO-916", km: 45200, lastRev: 40000, status: "Disponível", contractId: 1, history: [{date: "12/03/2026", desc: "Troca de óleo (Km: 40.000)"}] }
+        ];
+
+        let ordersData = JSON.parse(localStorage.getItem('semed_orders_v11')) || [
+            { id: 101, vehicleName: "Ônibus 01 (QWE-1234)", items: "Pastilhas de freio", date: "24/10/2026", status: "Pendente" }
+        ];
+
+        let currentActiveVehicleId = null;
+        let currentStatusFilter = 'Todos';
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const isLogged = localStorage.getItem('semed_logged');
+            if (isLogged === 'true') {
+                showApp();
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('app-container').classList.add('hidden');
+            }
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-xl text-white text-sm font-bold shadow-lg transition transform translate-y-2 ${type === 'success' ? 'bg-emerald-800 text-amber-300 border border-amber-400' : 'bg-rose-600'}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function fazerLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+            
+            if (email === 'ajalarenan@gmail.com' && pass === '123456') {
+                localStorage.setItem('semed_logged', 'true');
+                showApp();
+                showToast('Login realizado com sucesso!');
+            } else {
+                showToast('E-mail ou senha incorretos!', 'error');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('semed_logged');
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            showToast('Sessão encerrada.');
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            updateAll();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('semed_contracts_v1', JSON.stringify(contractsData));
+            localStorage.setItem('semed_fleet_v11', JSON.stringify(fleetData));
+            localStorage.setItem('semed_orders_v11', JSON.stringify(ordersData));
+        }
+
+        function switchTab(tabName) {
+            ['dashboard', 'fleet', 'contracts', 'orders', 'new-vehicle', 'details'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if(el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(`tab-${tabName}`);
+            if(target) target.classList.remove('hidden');
+
+            if(tabName === 'new-vehicle') {
+                document.getElementById('form-title').innerText = "Cadastro de Novo Ônibus Escolar";
+                document.getElementById('vehicle-form').reset();
+                document.getElementById('v-edit-id').value = "";
+                populateContractSelect();
+            }
+
+            ['dashboard', 'fleet', 'contracts', 'orders', 'new-vehicle'].forEach(n => {
+                const el = document.getElementById(`nav-${n}`);
+                if(el) el.className = "w-full text-left px-4 py-3 rounded-lg text-sm font-medium hover:bg-emerald-800 text-slate-200 transition cursor-pointer";
+            });
+            if(tabName !== 'details' && tabName !== 'new-vehicle') {
+                const activeNav = document.getElementById(`nav-${tabName}`);
+                if(activeNav) activeNav.className = "w-full text-left px-4 py-3 rounded-lg text-sm font-medium bg-amber-500 text-emerald-950 font-bold transition shadow-sm cursor-pointer";
+            }
+            window.scrollTo(0,0);
+        }
+
+        function populateContractSelect(selectedId = null) {
+            const select = document.getElementById('v-contract');
+            select.innerHTML = '<option value="">Selecione um contrato...</option>';
+            contractsData.forEach(c => {
+                const selected = c.id == selectedId ? 'selected' : '';
+                select.innerHTML += `<option value="${c.id}" ${selected}>${c.number} - ${c.company}</option>`;
+            });
+        }
+
+        function getStatusBadge(status) {
+            if (status === 'Disponível') return 'bg-emerald-100 text-emerald-800';
+            if (status === 'Parado') return 'bg-amber-100 text-amber-900';
+            return 'bg-rose-100 text-rose-800';
+        }
+
+        function updateAll() {
+            let total = fleetData.length, disp = 0, parado = 0, esperando = 0;
+            let tableHTML = "", alertHTML = "", ordersHTML = "", contractsHTML = "";
+
+            contractsData.forEach(c => {
+                contractsHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-bold text-slate-900">${c.number} <span class="block text-xs font-normal text-slate-500">${c.company}</span></td>
+                        <td class="p-4 text-slate-600 text-xs">${c.object}</td>
+                        <td class="p-4 text-slate-600 text-xs"><b>Início:</b> ${c.start}<br><b>Término:</b> ${c.end}</td>
+                        <td class="p-4 text-slate-600 text-xs"><b>Gestor:</b> ${c.gestor}<br><b>Fiscal:</b> ${c.fiscal}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="deleteContract(${c.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold cursor-pointer">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            fleetData.forEach(v => {
+                if (!v.status) v.status = 'Disponível';
+                const contract = contractsData.find(c => c.id == v.contractId);
+                const contractLabel = contract ? contract.number : 'Sem Contrato';
+
+                if (v.status === 'Disponível') disp++;
+                else if (v.status === 'Parado') parado++;
+                else esperando++;
+
+                if (currentStatusFilter !== 'Todos' && v.status !== currentStatusFilter) return;
+
+                const badgeClass = getStatusBadge(v.status);
+                const nextRev = v.lastRev + 10000;
+
+                tableHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-medium text-slate-900">${v.name} <span class="block text-xs font-normal text-slate-500 font-mono">${v.plate}</span></td>
+                        <td class="p-4 text-slate-600">${v.model}</td>
+                        <td class="p-4 text-slate-600 font-semibold">${v.km.toLocaleString()} km</td>
+                        <td class="p-4"><span class="${badgeClass} text-xs px-2.5 py-1 rounded-full font-bold">${v.status}</span></td>
+                        <td class="p-4 text-xs font-semibold text-emerald-900">${contractLabel}</td>
+                        <td class="p-4 text-center space-x-2">
+                            <button onclick="openDetails(${v.id})" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold cursor-pointer">Dossiê</button>
+                            <button onclick="openEditVehicle(${v.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer">Editar</button>
+                        </td>
+                    </tr>
+                `;
+
+                alertHTML += `
+                    <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800">${v.name} (${v.plate})</h4>
+                            <p class="text-xs text-slate-500">Status: <b>${v.status}</b> | Contrato: ${contractLabel}</p>
+                        </div>
+                        <button onclick="openDetails(${v.id})" class="text-xs font-medium text-emerald-800 font-semibold hover:underline cursor-pointer">Ver Dossiê</button>
+                    </div>
+                `;
+            });
+
+            ordersData.forEach(o => {
+                const badgeColor = o.status === 'Pendente' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-800';
+                ordersHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-medium text-slate-900">${o.vehicleName}</td>
+                        <td class="p-4 text-slate-600">${o.items}</td>
+                        <td class="p-4 text-slate-500 text-xs">${o.date}</td>
+                        <td class="p-4"><span class="${badgeColor} text-xs px-2.5 py-1 rounded-full font-bold">${o.status}</span></td>
+                        <td class="p-4 text-center">
+                            <button onclick="toggleOrderStatus(${o.id})" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold px-3 py-1 rounded-md transition cursor-pointer">Alternar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('kpi-total').innerText = total;
+            document.getElementById('kpi-ok').innerText = disp;
+            document.getElementById('kpi-warning').innerText = parado;
+            document.getElementById('kpi-danger').innerText = esperando;
+            document.getElementById('fleet-table-body').innerHTML = tableHTML;
+            document.getElementById('contracts-table-body').innerHTML = contractsHTML;
+            document.getElementById('dashboard-alerts-list').innerHTML = alertHTML;
+            document.getElementById('orders-table-body').innerHTML = ordersHTML;
+        }
+
+        function filterStatus(status) {
+            currentStatusFilter = status;
+            updateAll();
+        }
+
+        function openNewContractModal() {
+            const number = prompt("Número do Contrato (Ex: CT 012/2026):");
+            if (!number) return;
+            const company = prompt("Empresa Contratada:");
+            if (!company) return;
+            const object = prompt("Objeto do Contrato:");
+            if (!object) return;
+            const start = prompt("Data de Início da Vigência (AAAA-MM-DD):") || "2026-01-01";
+            const end = prompt("Data de Término da Vigência (AAAA-MM-DD):") || "2026-12-31";
+            const gestor = prompt("Nome do Gestor do Contrato:") || "Não informado";
+            const fiscal = prompt("Nome do Fiscal do Contrato:") || "Não informado";
+
+            contractsData.push({
+                id: Date.now(),
+                number, company, object, start, end, gestor, fiscal
+            });
+            saveToStorage();
+            updateAll();
+            showToast('Contrato cadastrado com sucesso!');
+        }
+
+        function deleteContract(id) {
+            if (confirm("Deseja realmente excluir este contrato?")) {
+                contractsData = contractsData.filter(c => c.id !== id);
+                saveToStorage();
+                updateAll();
+                showToast('Contrato removido.');
+            }
+        }
+
+        function saveVehicle(e) {
+            e.preventDefault();
+            const editId = document.getElementById('v-edit-id').value;
+            const name = document.getElementById('v-name').value;
+            const plate = document.getElementById('v-plate').value.toUpperCase();
+            const model = document.getElementById('v-model').value;
+            const km = parseInt(document.getElementById('v-km').value);
+            const lastRev = parseInt(document.getElementById('v-last-rev').value);
+            const status = document.getElementById('v-status').value;
+            const contractId = document.getElementById('v-contract').value;
+
+            if (editId) {
+                const v = fleetData.find(item => item.id == editId);
+                if (v) {
+                    v.name = name;
+                    v.plate = plate;
+                    v.model = model;
+                    v.km = km;
+                    v.lastRev = lastRev;
+                    v.status = status;
+                    v.contractId = contractId;
+                    v.history.unshift({ date: new Date().toLocaleDateString(), desc: "Dados e contrato atualizados." });
+                    showToast('Veículo atualizado com sucesso!');
+                }
+            } else {
+                const newV = {
+                    id: Date.now(),
+                    name, plate, model, km, lastRev, status, contractId,
+                    history: [{date: new Date().toLocaleDateString(), desc: "Veículo cadastrado."}]
+                };
+                fleetData.push(newV);
+                showToast('Novo veículo cadastrado!');
+            }
+
+            saveToStorage();
+            updateAll();
+            switchTab('fleet');
+        }
+
+        function openEditVehicle(id) {
+            const v = fleetData.find(item => item.id === id);
+            if (!v) return;
+
+            document.getElementById('form-title').innerText = `Editar Veículo: ${v.name}`;
+            document.getElementById('v-edit-id').value = v.id;
+            document.getElementById('v-name').value = v.name;
+            document.getElementById('v-plate').value = v.plate;
+            document.getElementById('v-model').value = v.model;
+            document.getElementById('v-km').value = v.km;
+            document.getElementById('v-last-rev').value = v.lastRev;
+            document.getElementById('v-status').value = v.status || 'Disponível';
+            
+            populateContractSelect(v.contractId);
+            switchTab('new-vehicle');
+        }
+
+        function openDetails(id) {
+            currentActiveVehicleId = id;
+            const v = fleetData.find(item => item.id === id);
+            if (!v) return;
+
+            const contract = contractsData.find(c => c.id == v.contractId);
+            const nextRev = v.lastRev + 10000;
+
+            document.getElementById('det-vehicle-title').innerText = v.name;
+            document.getElementById('det-vehicle-subtitle').innerText = `Placa: ${v.plate} | Modelo: ${v.model}`;
+            document.getElementById('det-vehicle-km').innerText = v.km.toLocaleString() + " km";
+            document.getElementById('det-last-rev-val').innerText = v.lastRev.toLocaleString() + " km";
+            document.getElementById('det-next-rev-val').innerText = nextRev.toLocaleString() + " km";
+            document.getElementById('det-status-select').value = v.status || 'Disponível';
+            
+            document.getElementById('det-contract-name').innerText = contract ? contract.number : 'Não vinculado';
+            document.getElementById('det-gestor').innerText = contract ? contract.gestor : 'N/D';
+            document.getElementById('det-fiscal').innerText = contract ? contract.fiscal : 'N/D';
+
+            let historyHTML = "";
+            v.history.forEach(h => {
+                historyHTML += `
+                    <div class="p-3 border-l-4 border-emerald-800 bg-slate-50 rounded-r-lg text-xs">
+                        <div class="flex justify-between font-bold text-slate-900">
+                            <span>${h.desc}</span>
+                            <span class="text-slate-500">${h.date}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('det-history-list').innerHTML = historyHTML;
+            switchTab('details');
+        }
+
+        function changeVehicleStatus(newStatus) {
+            const v = fleetData.find(item => item.id === currentActiveVehicleId);
+            if (v) {
+                v.status = newStatus;
+                v.history.unshift({ date: new Date().toLocaleDateString(), desc: `Status alterado para: ${newStatus}` });
+                saveToStorage();
+                updateAll();
+                showToast(`Status alterado para ${newStatus}`);
+            }
+        }
+
+        function registerMaintenanceModal() {
+            const desc = prompt("Descreva a manutenção realizada:");
+            if (!desc) return;
+            const v = fleetData.find(item => item.id === currentActiveVehicleId);
+            if (v) {
+                v.lastRev = v.km;
+                v.status = 'Disponível';
+                v.history.unshift({ date: new Date().toLocaleDateString(), desc: `${desc} (Revisão zerada em ${v.km.toLocaleString()} km)` });
+                saveToStorage();
+                openDetails(v.id);
+                updateAll();
+                showToast('Manutenção registrada com sucesso!');
+            }
+        }
+
+        function openNewOrderModal() {
+            const vehicleName = prompt("Veículo (Ex: Ônibus 01 - QWE-1234):");
+            if (!vehicleName) return;
+            const items = prompt("Peças necessárias:");
+            if (!items) return;
+
+            ordersData.unshift({
+                id: Date.now(),
+                vehicleName, items,
+                date: new Date().toLocaleDateString(),
+                status: "Pendente"
+            });
+            saveToStorage();
+            updateAll();
+            showToast('Pedido de peças registrado com sucesso!');
+            switchTab('orders');
+        }
+
+        function openOrderForCurrentVehicle() {
+            const v = fleetData.find(item => item.id === currentActiveVehicleId);
+            if (!v) return;
+            const items = prompt(`Peças necessárias para o ${v.name} (${v.plate})?`);
+            if (!items) return;
+
+            ordersData.unshift({
+                id: Date.now(),
+                vehicleName: `${v.name} (${v.plate})`,
+                items,
+                date: new Date().toLocaleDateString(),
+                status: "Pendente"
+            });
+            v.status = 'Esperando Peça';
+            saveToStorage();
+            updateAll();
+            showToast('Pedido solicitado e status alterado para "Esperando Peça"');
+            switchTab('orders');
+        }
+
+        function toggleOrderStatus(id) {
+            const o = ordersData.find(item => item.id === id);
+            if (o) {
+                o.status = o.status === 'Pendente' ? 'Aprovado' : 'Pendente';
+                saveToStorage();
+                updateAll();
+                showToast('Status do pedido alterado.');
+            }
+        }
+
+        function exportReport() {
+            window.print();
+        }
+
+        function filterFleet() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const rows = document.getElementById('fleet-table-body').getElementsByTagName('tr');
+            for (let row of rows) {
+                row.style.display = row.innerText.toLowerCase().includes(query) ? "" : "none";
+            }
+        }
+    </script>
+</body>
+</html>
