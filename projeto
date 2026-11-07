@@ -30,6 +30,127 @@
                 box-shadow: none !important;
             }
         }
+
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+            }
+
+            #app-container {
+                height: auto;
+                min-height: 100vh;
+                position: relative;
+            }
+
+            aside {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 82% !important;
+                max-width: 290px;
+                border-right: none !important;
+                border-bottom: 1px solid rgba(6, 78, 59, 0.5);
+                z-index: 50;
+                transform: translateX(-110%);
+                transition: transform 0.25s ease;
+                box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+            }
+
+            aside.menu-open {
+                transform: translateX(0);
+            }
+
+            .flex-1.flex-col.h-screen {
+                height: auto !important;
+                min-height: 100vh;
+            }
+
+            header {
+                padding: 1rem !important;
+                gap: 0.75rem;
+            }
+
+            main {
+                padding: 1rem !important;
+            }
+
+            .grid {
+                gap: 1rem !important;
+            }
+
+            .mobile-menu-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.45);
+                z-index: 40;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s ease;
+            }
+
+            .mobile-menu-overlay.show {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            #mobile-menu-toggle {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 2.5rem;
+                height: 2.5rem;
+                border-radius: 0.75rem;
+                border: 1px solid #cbd5e1;
+                background: #f8fafc;
+                color: #0f172a;
+                cursor: pointer;
+            }
+
+            #mobile-menu-toggle span,
+            #mobile-menu-toggle span::before,
+            #mobile-menu-toggle span::after {
+                content: "";
+                display: block;
+                width: 1.2rem;
+                height: 2px;
+                border-radius: 999px;
+                background: currentColor;
+                position: relative;
+                transition: all 0.25s ease;
+            }
+
+            #mobile-menu-toggle span::before {
+                position: absolute;
+                top: -0.35rem;
+            }
+
+            #mobile-menu-toggle span::after {
+                position: absolute;
+                top: 0.35rem;
+            }
+
+            #mobile-menu-toggle.menu-open span {
+                background: transparent;
+            }
+
+            #mobile-menu-toggle.menu-open span::before {
+                top: 0;
+                transform: rotate(45deg);
+            }
+
+            #mobile-menu-toggle.menu-open span::after {
+                top: 0;
+                transform: rotate(-45deg);
+            }
+        }
+
+        @media (min-width: 769px) {
+            #mobile-menu-toggle,
+            .mobile-menu-overlay {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 flex h-screen overflow-hidden">
@@ -63,10 +184,12 @@
     </div>
 
     <!-- APLICAÇÃO PRINCIPAL -->
-    <div id="app-container" class="flex h-screen w-screen overflow-hidden hidden">
+    <div id="app-container" class="flex flex-col md:flex-row h-screen w-screen overflow-hidden hidden">
         
+        <div id="mobile-menu-overlay" class="mobile-menu-overlay" onclick="toggleMobileMenu(false)"></div>
+
         <!-- MENU LATERAL -->
-        <aside class="w-64 bg-emerald-900 text-slate-100 flex flex-col justify-between border-r border-emerald-950">
+        <aside id="main-sidebar" class="w-full md:w-64 bg-emerald-900 text-slate-100 flex flex-col justify-between border-r border-emerald-950">
             <div>
                 <div class="p-6 border-b border-emerald-800 flex items-center space-x-3 bg-emerald-950/40">
                     <div class="bg-amber-500 text-emerald-950 p-2 rounded-xl font-bold">SE</div>
@@ -94,22 +217,25 @@
 
         <!-- CONTEÚDO PRINCIPAL -->
         <div class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-100">
-            <header class="bg-white shadow-sm border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <header class="bg-white shadow-sm border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 sticky top-0 z-10">
                 <div class="flex items-center space-x-3">
+                    <button id="mobile-menu-toggle" type="button" class="md:hidden" aria-label="Abrir menu" onclick="toggleMobileMenu()">
+                        <span></span>
+                    </button>
                     <div class="w-3 h-6 bg-amber-500 rounded-full"></div>
                     <h2 id="page-title" class="text-xl font-bold text-slate-800">Painel Geral da Frota</h2>
                 </div>
-                <div class="flex items-center space-x-3">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                     <button onclick="exportReport()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition border border-emerald-200 cursor-pointer">🖨️ Exportar Relatório</button>
                     <span class="text-xs bg-amber-100 text-amber-900 px-3 py-1 rounded-full font-bold">Módulo Escolar Ativo</span>
                 </div>
             </header>
 
-            <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+            <main class="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
                 
                 <!-- ABA 1: DASHBOARD -->
                 <div id="tab-dashboard" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
                         <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-800 border-t border-r border-b border-slate-200">
                             <p class="text-xs text-slate-500 font-semibold uppercase">Frota Monitorada</p>
                             <h3 id="kpi-total" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
@@ -224,7 +350,7 @@
                         <h3 id="form-title" class="font-bold text-slate-800 text-lg border-b pb-4">Cadastro de Novo Ônibus Escolar</h3>
                         <form id="vehicle-form" onsubmit="saveVehicle(event)" class="space-y-4">
                             <input type="hidden" id="v-edit-id">
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Identificação</label>
                                     <input type="text" id="v-name" required placeholder="Ônibus 10" class="w-full px-3 py-2 border rounded-lg text-sm">
@@ -238,7 +364,7 @@
                                 <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Modelo</label>
                                 <input type="text" id="v-model" required placeholder="Mercedes-Benz LO-916" class="w-full px-3 py-2 border rounded-lg text-sm">
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Km Atual</label>
                                     <input type="number" id="v-km" required placeholder="45000" class="w-full px-3 py-2 border rounded-lg text-sm">
@@ -296,7 +422,7 @@
                             <h4 id="det-vehicle-km" class="text-2xl font-extrabold text-emerald-800">0 km</h4>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         <div class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
                             <h4 class="font-bold text-slate-800">Parâmetros e Peças</h4>
                             <div class="space-y-3 text-sm">
@@ -395,6 +521,18 @@
             localStorage.setItem('semed_orders_v11', JSON.stringify(ordersData));
         }
 
+        function toggleMobileMenu(forceOpen = null) {
+            const sidebar = document.getElementById('main-sidebar');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const toggle = document.getElementById('mobile-menu-toggle');
+            const shouldOpen = forceOpen !== null ? forceOpen : !sidebar.classList.contains('menu-open');
+
+            sidebar.classList.toggle('menu-open', shouldOpen);
+            overlay.classList.toggle('show', shouldOpen);
+            toggle.classList.toggle('menu-open', shouldOpen);
+            toggle.setAttribute('aria-expanded', String(shouldOpen));
+        }
+
         function switchTab(tabName) {
             ['dashboard', 'fleet', 'contracts', 'orders', 'new-vehicle', 'details'].forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
@@ -402,6 +540,10 @@
             });
             const target = document.getElementById(`tab-${tabName}`);
             if(target) target.classList.remove('hidden');
+
+            if (window.innerWidth <= 768) {
+                toggleMobileMenu(false);
+            }
 
             if(tabName === 'new-vehicle') {
                 document.getElementById('form-title').innerText = "Cadastro de Novo Ônibus Escolar";
